@@ -8,7 +8,7 @@ for i in range(n):
     for j in range(1,x):
         
         if x%j ==0:
-            divisor.append()
+            divisor.append(j)
             
         if sum(divisor) == x:
             print(f'{x} eh perfeito')
