@@ -10,8 +10,8 @@ for i in range(n):
         if x%j ==0:
             divisor.append(j)
             
-        if sum(divisor) == x:
-            print(f'{x} eh perfeito')
+    if sum(divisor) == x:
+        print(f'{x} eh perfeito')
             
-        else:
-            print(f'{x} nao eh perfeito')
+    else:
+        print(f'{x} nao eh perfeito')
