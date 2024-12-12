@@ -1,1 +1,156 @@
 
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.brave.options import Options
+import openpyxl
+from datetime import datetime
+import time
+import random
+
+
+class GoogleSearchAutomation:
+    def _init_(self, excel_file_path):
+        """
+        Initialize the automation with Excel file path and setup webdriver
+        """
+        # Set up brave options for consistent behavior
+        brave_options = Options()
+        brave_options.add_argument("--headless")  # Run in background
+        brave_options.add_argument("--disable-extensions")
+        brave_options.add_argument("--disable-gpu")
+        brave_options.add_argument("--no-sandbox")
+
+        # Setup WebDriver
+        self.driver = webdriver.brave(options=brave_options)
+
+        # Set random seed for reproducibility
+        random.seed(42)
+
+        # Load Excel Workbook in read-write mode
+        self.workbook = openpyxl.load_workbook(excel_file_path)
+
+        # Get current day of the week
+        self.current_day = datetime.now().strftime("%A")
+
+        # Select current day's sheet
+        self.current_sheet = self.workbook[self.current_day]
+
+    def google_search(self, keyword):
+        """
+        Perform Google search and find longest and shortest suggestions
+        """
+        try:
+            # Navigate to Google
+            self.driver.get('https://www.google.com')
+
+            # Wait a moment to simulate human behavior
+            time.sleep(random.uniform(1.5, 2.5))
+
+            # Find search input
+            search_input = self.driver.find_element(By.NAME, 'q')
+
+            # Enter keyword
+            search_input.clear()
+            search_input.send_keys(keyword)
+            search_input.send_keys(Keys.DOWN)  # To trigger suggestions
+
+            # Wait for suggestions
+            time.sleep(random.uniform(1.0, 2.0))
+
+            # Find suggestion elements with multiple selectors
+            suggestion_selectors = [
+                'ul.G43f7e li',
+                'div.suggestions-inner li',
+                'div[role="listbox"] div[role="option"]'
+            ]
+
+            suggestions = []
+            for selector in suggestion_selectors:
+                suggestions = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                if suggestions:
+                    break
+
+            # Extract suggestion texts, removing duplicates and empty strings
+            suggestion_texts = list(set(
+                suggestion.text.strip()
+                for suggestion in suggestions
+                if suggestion.text.strip()
+            ))
+
+            # Find longest and shortest suggestions
+            if suggestion_texts:
+                longest_suggestion = max(suggestion_texts, key=len)
+                shortest_suggestion = min(suggestion_texts, key=len)
+            else:
+                longest_suggestion = "No suggestion"
+                shortest_suggestion = "No suggestion"
+
+            return longest_suggestion, shortest_suggestion
+
+        except Exception as e:
+            print(f"Error during search for '{keyword}': {e}")
+            return "No suggestion", "No suggestion"
+
+    def process_keywords(self):
+        """
+        Process keywords from column B, save results in columns C and D
+        """
+        # Skip the header row (start from row 2)
+        for row in range(2, self.current_sheet.max_row + 1):
+            # Read keyword from column B
+            keyword = self.current_sheet.cell(row=row, column=2).value
+
+            # Skip if no keyword
+            if not keyword:
+                continue
+
+            # Perform search
+            longest, shortest = self.google_search(str(keyword))
+
+            # Save longest suggestion text in column C
+            self.current_sheet.cell(row=row, column=3, value=longest)
+
+            # Save shortest suggestion text in column D
+            self.current_sheet.cell(row=row, column=4, value=shortest)
+
+            print(f"Processed keyword: {keyword}")
+            print(f"Longest suggestion: {longest}")
+            print(f"Shortest suggestion: {shortest}\n")
+
+    def save_results(self, output_file):
+        """
+        Save the results to a new Excel file
+        """
+        self.workbook.save(output_file)
+        print(f"Results saved to {output_file}")
+
+    def close(self):
+        """
+        Close the browser and workbook
+        """
+        self.driver.quit()
+
+
+def main():
+    # Excel file path
+    input_excel = 'C:\Users\maruf\Desktop\exel\Keywords.xlsx'
+    output_excel = 'C:\Users\maruf\Desktop\exel\Keywords.xlsx'
+
+    # Initialize automation
+    automation = GoogleSearchAutomation(input_excel)
+
+    try:
+        # Process keywords
+        automation.process_keywords()
+
+        # Save results
+        automation.save_results(output_excel)
+
+    finally:
+        # Ensure browser is closed
+        automation.close()
+
+
+if _name_ == "_main_":
+    main()
